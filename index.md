@@ -77,6 +77,15 @@ All materials are in the GitHub repo:
 
 ---
 
+## Venue
+
+**IIT Alumni Centre Bengaluru (IITACB)**
+#60, KIADB Bommasandra Industrial Area, Bommasandra, Bengaluru, Karnataka 560099
+
+[View on Google Maps](https://www.google.com/maps/search/?api=1&query=%2360+KIADB+Bommasandra+Industrial+Area+Bommasandra+Bengaluru+Karnataka+560099)
+
+---
+
 ## Contact
 
 For questions about logistics, reach out to the workshop organiser.
