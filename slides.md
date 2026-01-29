@@ -38,10 +38,16 @@ style: |
 
 # Agenda
 
-| Part | Topic | Duration |
-|------|-------|----------|
-| **1** | Theory & Guidelines | 2 hours |
-| **2** | Hands-On Build | 2 hours |
+| Time (IST) | Session | Format |
+|------------|---------|--------|
+| 10:30 – 10:50 | What is an Agent? + Live Demo | Talk |
+| 10:50 – 11:20 | Architecture Deep Dive | Talk |
+| 11:20 – 11:30 | **Break** | ☕ |
+| 11:30 – 11:55 | Mini Hands-On: Verify Setup + Run Starter | Code |
+| 11:55 – 12:20 | Context Window, Models & Safety | Talk |
+| 12:20 – 12:30 | Starter Code Walkthrough + Q&A | Talk |
+| 12:30 – 1:30 | **Lunch** | 🍽️ |
+| 1:30 – 3:30 | Hands-On Coding (4 milestones) | Workshop |
 
 **Outcome:** You walk out with a working coding agent.
 
@@ -92,11 +98,31 @@ while True:
 
 ---
 
-# Demo
+# Demo — Predict First
 
-Let's see a working agent edit code in real time.
+Before I run this, **you tell me:**
 
-<!-- Facilitator: run solution.py and ask it to do a small task -->
+> "Create a file called hello.py that prints hello world"
+
+What tools will the agent use? In what order?
+
+🤔 Write your prediction down, then let's watch.
+
+<!-- Facilitator: collect 2-3 predictions from audience, then run solution.py -->
+
+---
+
+# How Agents Fail
+
+| Failure Mode | What Happens |
+|---|---|
+| Edit loops | Agent keeps retrying the same edit with wrong match string |
+| Hallucinated paths | Reads/edits files that don't exist |
+| Context overflow | Too many tool results fill up the context window |
+| Bash hangs | `run_bash` blocks on interactive command (e.g. `python`) |
+| Invalid tool args | Model sends wrong parameter names or types |
+
+These aren't bugs in your code — they're **inherent to the pattern.**
 
 ---
 
@@ -166,6 +192,23 @@ The model is **trained** to emit tool calls in the right format.
 | `search_files` | Regex search across files |
 
 This is enough to build a useful coding agent.
+
+---
+
+# Design Decisions
+
+**Why these 5 tools?**
+They cover the read-think-edit-verify loop. That's what coding is.
+
+**Why string-replace, not whole-file rewrite?**
+- Forces the model to read first (it needs the exact match string)
+- Smaller changes = fewer tokens = cheaper + safer
+- Easier to review what changed
+
+**Why not LangChain / CrewAI / AutoGen?**
+- 300 lines is easier to debug than a framework
+- You understand every line
+- Frameworks add abstractions you'll fight against
 
 ---
 
@@ -239,11 +282,15 @@ edit, and search files, and run bash commands.
 
 Important rules:
 - Always read a file before editing it.
+  # ↑ Prevents hallucinated edits — model sees real content
 - Explain what you're doing.
-- Be cautious with bash commands."""
+  # ↑ Makes the agent's reasoning visible to the user
+- Be cautious with bash commands.
+  # ↑ No safety net — shell commands run for real
+"""
 ```
 
-Keep it concise. The model follows instructions well.
+Each rule exists because agents **will** do the wrong thing without it.
 
 ---
 
@@ -274,7 +321,33 @@ Good agent design principle:
 
 ---
 
+# How Agents Fail — Live
+
+Let's **make** the agent fail.
+
+- Ask it to edit a file it hasn't read
+- Give it an ambiguous edit string that matches multiple times
+- Ask it to run an interactive command like `python` (no args)
+
+Watch what happens. This is what debugging agents looks like.
+
+<!-- Facilitator: pick 1-2 of these and demo live. Show the tool calls and error messages. -->
+
+---
+
 # ☕ Break (10 min)
+
+---
+
+# Mini Hands-On: Verify Setup
+
+1. Clone the repo: `git clone <repo-url>`
+2. Run `pip install anthropic`
+3. Set your API key: `export ANTHROPIC_API_KEY="sk-ant-..."`
+4. Run `python solution.py` — try asking it to read a file
+5. Working? Great — you'll build this from scratch after lunch.
+
+<!-- Facilitator: walk around, help with setup issues -->
 
 ---
 
@@ -293,12 +366,15 @@ Let's look at `agent.py` together.
 # What You'll Build
 
 ```
-agent.py          ← starter code with TODOs
-solution.py       ← complete reference (no peeking!)
-requirements.txt  ← just "anthropic"
+agent.py              ← starter code with TODOs
+solution.py           ← complete reference (no peeking!)
+milestone1_done.py    ← checkpoint after milestone 1
+milestone2_done.py    ← checkpoint after milestone 2
+milestone3_done.py    ← checkpoint after milestone 3
+requirements.txt      ← just "anthropic"
 ```
 
-4 milestones, each builds on the last.
+4 milestones, each builds on the last. **Checkpoint files** let you catch up if you fall behind.
 
 ---
 
@@ -308,9 +384,11 @@ requirements.txt  ← just "anthropic"
 
 ---
 
-# Milestone 1 (0-30 min)
+# Milestone 1 (0–40 min)
 
 ### Get the loop running with `read_file`
+
+> **Checkpoint files available:** If you fall behind, copy `milestone1_done.py` → `agent.py` to catch up.
 
 1. Fill in the API call in the agent loop
 2. Handle `stop_reason == "tool_use"` — execute tools, feed results back
@@ -358,9 +436,19 @@ else:
 
 ---
 
-# Milestone 2 (30-60 min)
+# ⏱️ Check-in — 2:00 PM
+
+How's everyone doing? Raise a hand if you need help.
+
+<!-- Facilitator: walk around, unblock anyone stuck -->
+
+---
+
+# Milestone 2 (40–80 min)
 
 ### Add `list_files` and `edit_file`
+
+> **Falling behind?** Copy `milestone2_done.py` → `agent.py`
 
 1. Add tool definitions to `TOOLS` list
 2. Implement the functions
@@ -404,9 +492,19 @@ Key: require **exact, unique** string match.
 
 ---
 
-# Milestone 3 (60-90 min)
+# ⏱️ Check-in — 2:40 PM
+
+Almost there! After this milestone you have a fully working agent.
+
+<!-- Facilitator: walk around, help stragglers catch up with milestone2_done.py -->
+
+---
+
+# Milestone 3 (80–110 min)
 
 ### Add `run_bash` with safety checks
+
+> **Falling behind?** Copy `milestone3_done.py` → `agent.py`
 
 1. Add tool definition
 2. Implement with safety checks + timeout
@@ -435,14 +533,15 @@ def run_bash(command):
 
 ---
 
-# Milestone 4 (90-120 min)
+# Milestone 4 — Stretch/Polish
 
-### Polish & Test
+### Give your agent a real task
 
-- Try a real task: "Add a function to sort a list and write a test for it"
-- Watch the agent read, think, edit, and run tests
+> "Create an HTML file with a working calculator — buttons for 0-9, +, -, ×, ÷, =, and a display."
 
-### Stretch Goals
+Watch it create the file, then open it in your browser.
+
+### Other stretch goals
 - Add `search_files` (regex grep across files)
 - Add confirmation prompts before edits
 - Persist conversation history to a file
@@ -473,6 +572,24 @@ def run_bash(command):
 3. **Less is more** — 5 well-defined tools go a long way
 4. **Safety matters** — validate inputs, block destructive actions
 5. **The model decides** — you provide tools, it chooses when to use them
+
+---
+
+# What To Do This Week
+
+**Tonight:**
+- Push your agent to GitHub
+- Try giving it a task in one of your own projects
+
+**This week:**
+- Add `search_files` if you didn't finish Milestone 4
+- Add conversation history saving/loading
+- Read ampcode.com/how-to-build-an-agent end to end
+
+**This month:**
+- Build a specialized agent (test runner, PR reviewer, doc generator)
+- Try the Kaggle 5-Day AI Agents course
+- Explore MCP (Model Context Protocol) for connecting agents to external tools
 
 ---
 
