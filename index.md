@@ -28,7 +28,7 @@ title: "Building an AI Coding Agent — Workshop"
 
 - A **laptop** with a code editor installed
 - **Python 3.10+** installed
-- An **Anthropic API key** — sign up free at [console.anthropic.com](https://console.anthropic.com) (the free tier is sufficient, no payment needed)
+- An **Anthropic API key** — sign up at [console.anthropic.com](https://console.anthropic.com) (new accounts receive free trial credits)
 - **Internet access** at the venue
 
 ---
