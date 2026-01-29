@@ -102,6 +102,7 @@ while True:
 - API Docs: https://docs.anthropic.com
 - Console: https://console.anthropic.com
 - Guide: https://ampcode.com/how-to-build-an-agent
+- Further Learning: https://www.kaggle.com/learn-guide/5-day-agents (5-Day AI Agents course by Google & Kaggle)
 
 ## Setup Checklist
 

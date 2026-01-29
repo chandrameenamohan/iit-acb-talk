@@ -482,6 +482,7 @@ def run_bash(command):
 - **Deep dive:** ghuntley.com/agent
 - **API docs:** docs.anthropic.com
 - **Console:** console.anthropic.com
+- **Course:** kaggle.com/learn-guide/5-day-agents (Google's 5-day AI Agents intensive — covers memory, evaluation, multi-agent patterns)
 
 ---
 
