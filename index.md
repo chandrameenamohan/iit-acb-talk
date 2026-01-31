@@ -15,10 +15,10 @@ title: "Building an AI Coding Agent — Workshop"
 |------------|---------|--------|
 | 10:30 – 10:50 | What is an AI Agent? + Live Demo | Talk |
 | 10:50 – 11:20 | Architecture Deep Dive | Talk |
-| 11:20 – 11:40 | Context Window & Model Selection | Talk |
-| 11:40 – 12:00 | System Prompts & Safety | Talk |
-| 12:00 – 12:10 | **Break** | ☕ |
-| 12:10 – 12:30 | Starter Code Walkthrough + Q&A | Talk |
+| 11:20 – 11:30 | **Break** | ☕ |
+| 11:30 – 11:55 | Mini Hands-On: Verify Setup + Run Starter | Code |
+| 11:55 – 12:20 | Context Window, Models & Safety | Talk |
+| 12:20 – 12:30 | Starter Code Walkthrough + Q&A | Talk |
 | 12:30 – 1:30 | **Lunch** | 🍽️ |
 | 1:30 – 3:30 | Hands-On Coding (4 milestones) | Workshop |
 
