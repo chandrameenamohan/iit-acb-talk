@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Anatomy of an AI Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400;1,9..40,500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,300;1,9..144,400;1,9..144,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --indigo-deep: #110a3e;
+    --indigo-mid: #1e1260;
+    --indigo-soft: #2d1b7a;
+    --lavender-bg: #eee8f8;
+    --lavender-light: #f5f1fb;
+    --white: #ffffff;
+    --text-dark: #1a1044;
+    --text-body: #2e2458;
+    --text-muted: #6b5f8a;
+    --accent-violet: #7c3aed;
+    --accent-violet-soft: #a78bfa;
+    --accent-glow: rgba(124, 58, 237, 0.08);
+    --terminal-bg: #0d0a1a;
+    --terminal-surface: #141025;
+    --terminal-text: #c8c3d8;
+    --terminal-green: #6ee7b7;
+    --terminal-blue: #7dd3fc;
+    --terminal-yellow: #fde68a;
+    --terminal-pink: #f0abfc;
+    --terminal-orange: #fdba74;
+    --terminal-comment: #5b5477;
+    --terminal-string: #86efac;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  }
+
+  html {
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--lavender-bg);
+    color: var(--text-body);
+    line-height: 1.72;
+    min-height: 100vh;
+  }
+
+  /* ── Grain overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    z-index: 9999;
+  }
+
+  ::selection {
+    background: rgba(124, 58, 237, 0.2);
+    color: var(--indigo-deep);
+  }
+
+  /* ── Article Container ── */
+  .article-container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── Header ── */
+  .article-header {
+    padding: 80px 0 60px;
+    text-align: center;
+    position: relative;
+  }
+
+  .header-tag {
+    display: inline-block;
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-violet);
+    background: rgba(124, 58, 237, 0.08);
+    padding: 6px 16px;
+    border-radius: 100px;
+    margin-bottom: 28px;
+  }
+
+  .article-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 3rem;
+    line-height: 1.12;
+    color: var(--indigo-deep);
+    letter-spacing: -0.03em;
+    margin-bottom: 20px;
+  }
+
+  .article-subtitle {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  .header-line {
+    width: 48px;
+    height: 3px;
+    background: var(--accent-violet);
+    border-radius: 2px;
+    margin: 36px auto 0;
+  }
+
+  /* ── Act Headings ── */
+  .act-marker {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 72px;
+    margin-bottom: 12px;
+  }
+
+  .act-number {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-violet);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .act-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--accent-violet-soft), transparent);
+    opacity: 0.3;
+  }
+
+  .act-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.85rem;
+    color: var(--indigo-deep);
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    margin-bottom: 24px;
+  }
+
+  /* ── Prose ── */
+  .prose p {
+    margin-bottom: 20px;
+    font-size: 1rem;
+    line-height: 1.78;
+  }
+
+  .prose p strong {
+    color: var(--text-dark);
+    font-weight: 600;
+  }
+
+  .prose p em {
+    font-style: italic;
+    color: var(--text-dark);
+  }
+
+  /* ── Code Blocks ── */
+  .code-block {
+    background: var(--terminal-bg);
+    border-radius: 12px;
+    margin: 28px 0;
+    overflow: hidden;
+    box-shadow:
+      0 2px 8px rgba(17, 10, 62, 0.08),
+      0 12px 48px rgba(17, 10, 62, 0.12);
+    position: relative;
+  }
+
+  .code-block--interaction {
+    background: var(--terminal-surface);
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 18px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .code-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .code-dot:nth-child(1) { background: #ff5f57; }
+  .code-dot:nth-child(2) { background: #febc2e; }
+  .code-dot:nth-child(3) { background: #28c840; }
+
+  .code-label {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--terminal-comment);
+    letter-spacing: 0.04em;
+  }
+
+  .code-block pre {
+    padding: 20px 22px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.7;
+    color: var(--terminal-text);
+    tab-size: 4;
+  }
+
+  .code-block pre::-webkit-scrollbar {
+    height: 6px;
+  }
+  .code-block pre::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .code-block pre::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+  }
+
+  /* Syntax colors */
+  .kw { color: var(--terminal-pink); }
+  .fn { color: var(--terminal-blue); }
+  .str { color: var(--terminal-string); }
+  .cm { color: var(--terminal-comment); font-style: italic; }
+  .num { color: var(--terminal-orange); }
+  .op { color: #e0d4f7; }
+  .var { color: var(--terminal-text); }
+  .tool { color: var(--terminal-yellow); }
+  .prompt-marker { color: var(--terminal-green); font-weight: 500; }
+  .dim { color: var(--terminal-comment); }
+
+  /* ── Callout Boxes ── */
+  .callout {
+    background: var(--white);
+    border-left: 3px solid var(--accent-violet);
+    border-radius: 0 10px 10px 0;
+    padding: 22px 26px;
+    margin: 32px 0;
+    position: relative;
+    box-shadow: 0 1px 4px rgba(17, 10, 62, 0.04);
+  }
+
+  .callout-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent-violet);
+    margin-bottom: 8px;
+  }
+
+  .callout p {
+    font-size: 0.95rem;
+    line-height: 1.65;
+    color: var(--text-dark);
+    font-weight: 400;
+  }
+
+  .callout p em {
+    font-style: italic;
+  }
+
+  /* ── SDK Note Box ── */
+  .sdk-note {
+    background: rgba(124, 58, 237, 0.04);
+    border: 1px solid rgba(124, 58, 237, 0.12);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin: 28px 0;
+  }
+
+  .sdk-note-label {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent-violet);
+    margin-bottom: 6px;
+  }
+
+  .sdk-note p {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  /* ── Divider ── */
+  .section-break {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 56px 0;
+    color: var(--accent-violet-soft);
+    opacity: 0.4;
+  }
+
+  .section-break span {
+    font-size: 0.5rem;
+    letter-spacing: 0.3em;
+  }
+
+  /* ── Philosophical Closing ── */
+  .closing {
+    margin-top: 64px;
+    padding-top: 48px;
+    border-top: 1px solid rgba(124, 58, 237, 0.12);
+  }
+
+  .closing p {
+    font-family: var(--font-display);
+    font-size: 1.12rem;
+    line-height: 1.75;
+    color: var(--text-dark);
+    font-weight: 400;
+    font-style: italic;
+  }
+
+  /* ── CTA ── */
+  .cta-section {
+    margin: 64px 0 0;
+    padding: 44px 40px;
+    background: var(--indigo-deep);
+    border-radius: 16px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      0 4px 16px rgba(17, 10, 62, 0.15),
+      0 16px 64px rgba(17, 10, 62, 0.2);
+  }
+
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    top: -60%;
+    right: -20%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(124, 58, 237, 0.2) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .cta-section::after {
+    content: '';
+    position: absolute;
+    bottom: -40%;
+    left: -10%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(167, 139, 250, 0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .cta-heading {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: var(--white);
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 1;
+    letter-spacing: -0.01em;
+  }
+
+  .cta-text {
+    font-size: 0.92rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 28px;
+    position: relative;
+    z-index: 1;
+    max-width: 440px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+  }
+
+  .cta-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--white);
+    color: var(--indigo-deep);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.92rem;
+    padding: 14px 36px;
+    border-radius: 100px;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    position: relative;
+    z-index: 1;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  }
+
+  .cta-button svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* ── Footer ── */
+  .article-footer {
+    text-align: center;
+    padding: 48px 0 64px;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    letter-spacing: 0.02em;
+  }
+
+  .article-footer a {
+    color: var(--accent-violet);
+    text-decoration: none;
+  }
+
+  /* ── Inline Code ── */
+  .prose code, .callout code, .sdk-note code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: rgba(124, 58, 237, 0.07);
+    color: var(--indigo-soft);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    html { font-size: 15.5px; }
+    .article-header { padding: 56px 0 44px; }
+    .article-title { font-size: 2.2rem; }
+    .article-subtitle { font-size: 1.05rem; }
+    .act-title { font-size: 1.5rem; }
+    .code-block pre { font-size: 0.75rem; padding: 16px; }
+    .cta-section { padding: 32px 24px; }
+    .article-container { padding: 0 18px; }
+  }
+
+  /* ── Animations ── */
+  @media (prefers-reduced-motion: no-preference) {
+    .article-header, .act-marker, .act-title, .prose p,
+    .code-block, .callout, .sdk-note, .closing, .cta-section {
+      animation: fadeUp 0.6s ease both;
+    }
+    .act-marker { animation-delay: 0.05s; }
+    .code-block { animation-delay: 0.1s; }
+    .callout { animation-delay: 0.15s; }
+  }
+
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>
+</head>
+<body>
+
+<article class="article-container">
+
+  <!-- Header -->
+  <header class="article-header">
+    <div class="header-tag">AI Agents Workshop</div>
+    <h1 class="article-title">The Anatomy of an AI&nbsp;Agent</h1>
+    <p class="article-subtitle">Three acts, 300 lines of Python, and the architecture behind every coding agent.</p>
+    <div class="header-line"></div>
+  </header>
+
+  <!-- Intro -->
+  <div class="prose">
+    <p>There's a mystique around AI agents. They seem to <em>think</em>, <em>plan</em>, and <em>act</em> autonomously. They read your code, propose changes, run your tests. They feel like a leap beyond chatbots.</p>
+    <p>They're not. An AI agent is a <strong>while loop</strong>, a <strong>list of messages</strong>, and a <strong>set of tools</strong>. That's the entire architecture. Let's build one from scratch&nbsp;&mdash; in three acts.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!--  ACT 1                                  -->
+  <!-- ═══════════════════════════════════════ -->
+
+  <div class="act-marker">
+    <span class="act-number">Act 1</span>
+    <span class="act-line"></span>
+  </div>
+
+  <h2 class="act-title">The Loop</h2>
+
+  <div class="prose">
+    <p>The simplest possible agent is an API client, a messages list, and a loop. Here it is &mdash; the whole thing:</p>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-dot"></span>
+      <span class="code-dot"></span>
+      <span class="code-dot"></span>
+      <span class="code-label">agent.py</span>
+    </div>
+    <pre><span class="kw">from</span> <span class="var">openai</span> <span class="kw">import</span> <span class="fn">OpenAI</span>
+
+<span class="var">client</span> <span class="op">=</span> <span class="fn">OpenAI</span>()
+<span class="var">messages</span> <span class="op">=</span> []
+
+<span class="kw">while</span> <span class="num">True</span>:
+    <span class="var">user_input</span> <span class="op">=</span> <span class="fn">input</span>(<span class="str">"You: "</span>)
+    <span class="var">messages</span>.<span class="fn">append</span>({<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="var">user_input</span>})
+
+    <span class="var">response</span> <span class="op">=</span> <span class="var">client</span>.<span class="var">chat</span>.<span class="var">completions</span>.<span class="fn">create</span>(
+        <span class="var">model</span><span class="op">=</span><span class="str">"gpt-4o"</span>, <span class="var">messages</span><span class="op">=</span><span class="var">messages</span>
+    )
+    <span class="var">reply</span> <span class="op">=</span> <span class="var">response</span>.<span class="var">choices</span>[<span class="num">0</span>].<span class="var">message</span>
+    <span class="var">messages</span>.<span class="fn">append</span>(<span class="var">reply</span>)
+    <span class="fn">print</span>(<span class="str">f"Agent: </span><span class="op">{</span><span class="var">reply</span>.<span class="var">content</span><span class="op">}</span><span class="str">"</span>)</pre>
+  </div>
+
+  <div class="prose">
+    <p>This is already a conversation. Each message &mdash; yours and the model's &mdash; gets appended to the <code>messages</code> list. The model sees the entire history on every call. It remembers context, follows threads, builds on previous answers.</p>
+    <p>But it can only <em>talk</em>. It can't read your files. It can't run your code. It can't <em>do</em> anything. It's a chatbot with a good memory &mdash; nothing more.</p>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">Why it matters</div>
+    <p>This 12-line loop is the skeleton of every AI agent &mdash; from ChatGPT to Claude Code to Devin. Everything else is just adding tools.</p>
+  </div>
+
+  <div class="sdk-note">
+    <div class="sdk-note-label">A note on SDKs</div>
+    <p>This article uses the <strong>OpenAI SDK</strong> because it works with multiple providers &mdash; OpenAI, Gemini, Ollama, and Anthropic &mdash; just by changing the base URL. If you prefer the <strong>Anthropic SDK</strong> directly, the pattern is nearly identical. See our workshop materials for both versions.</p>
+  </div>
+
+  <div class="section-break">
+    <span>&bull; &bull; &bull;</span>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!--  ACT 2                                  -->
+  <!-- ═══════════════════════════════════════ -->
+
+  <div class="act-marker">
+    <span class="act-number">Act 2</span>
+    <span class="act-line"></span>
+  </div>
+
+  <h2 class="act-title">Teaching It to See</h2>
+
+  <div class="prose">
+    <p>To give the model eyes, we give it <strong>tools</strong>. A tool is just a function with a JSON schema describing its name, purpose, and parameters. The model is trained to recognize these schemas and emit structured calls when it wants to use one.</p>
+    <p>Let's add two tools: <code>read_file</code> and <code>list_files</code>.</p>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-dot"></span>
+      <span class="code-dot"></span>
+      <span class="code-dot"></span>
+      <span class="code-label">tool definition</span>
+    </div>
+    <pre><span class="var">TOOLS</span> <span class="op">=</span> [{
+    <span class="str">"type"</span>: <span class="str">"function"</span>,
+    <span class="str">"function"</span>: {
+        <span class="str">"name"</span>: <span class="str">"read_file"</span>,
+        <span class="str">"description"</span>: <span class="str">"Read the contents of a file"</span>,
+        <span class="str">"parameters"</span>: {
+            <span class="str">"type"</span>: <span class="str">"object"</span>,
+            <span class="str">"properties"</span>: {
+                <span class="str">"path"</span>: {<span class="str">"type"</span>: <span class="str">"string"</span>}
+            },
+            <span class="str">"required"</span>: [<span class="str">"path"</span>]
+        }
+    }
+}]</pre>
+  </div>
+
+  <div class="prose">
+    <p>But defining tools isn't enough. The model might <em>ask</em> to use a tool, but someone has to actually run it. That's what the inner tool loop does &mdash; it checks whether the model wants to call a tool, executes it, and feeds the result back:</p>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-dot"></span>
+      <span class="code-dot"></span>
+      <span class="code-dot"></span>
+      <span class="code-label">the tool loop</span>
+    </div>
+    <pre><span class="kw">while</span> <span class="num">True</span>:
+    <span class="var">response</span> <span class="op">=</span> <span class="var">client</span>.<span class="var">chat</span>.<span class="var">completions</span>.<span class="fn">create</span>(
+        <span class="var">model</span><span class="op">=</span><span class="str">"gpt-4o"</span>, <span class="var">messages</span><span class="op">=</span><span class="var">messages</span>, <span class="var">tools</span><span class="op">=</span><span class="var">TOOLS</span>
+    )
+    <span class="var">message</span> <span class="op">=</span> <span class="var">response</span>.<span class="var">choices</span>[<span class="num">0</span>].<span class="var">message</span>
+    <span class="var">messages</span>.<span class="fn">append</span>(<span class="var">message</span>)
+
+    <span class="kw">if</span> <span class="var">message</span>.<span class="var">tool_calls</span>:
+        <span class="kw">for</span> <span class="var">tool_call</span> <span class="kw">in</span> <span class="var">message</span>.<span class="var">tool_calls</span>:
+            <span class="var">result</span> <span class="op">=</span> <span class="fn">execute_tool</span>(<span class="var">tool_call</span>)
+            <span class="var">messages</span>.<span class="fn">append</span>({
+                <span class="str">"role"</span>: <span class="str">"tool"</span>,
+                <span class="str">"tool_call_id"</span>: <span class="var">tool_call</span>.<span class="var">id</span>,
+                <span class="str">"content"</span>: <span class="var">result</span>,
+            })
+    <span class="kw">else</span>:
+        <span class="fn">print</span>(<span class="var">message</span>.<span class="var">content</span>)
+        <span class="kw">break</span></pre>
+  </div>
+
+  <div class="prose">
+    <p>Now the model can explore. Ask it <em>"what files are in this directory?"</em> and it will call <code>list_files</code>, read the results, and respond intelligently. Ask it to read your configuration file and it will. The model <strong>decides</strong> when to use tools &mdash; you just execute what it asks for.</p>
+    <p>This is the critical insight: the model doesn't see your filesystem. It receives tool results as text, reasons about them, and decides what to do next. It's reading, not seeing.</p>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">Why it matters</div>
+    <p>The model doesn't "see" your filesystem. It reads tool results as text, reasons about them, and decides what to do next. This is the same pattern whether the tool reads a file, queries a database, or calls an API.</p>
+  </div>
+
+  <div class="section-break">
+    <span>&bull; &bull; &bull;</span>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!--  ACT 3                                  -->
+  <!-- ═══════════════════════════════════════ -->
+
+  <div class="act-marker">
+    <span class="act-number">Act 3</span>
+    <span class="act-line"></span>
+  </div>
+
+  <h2 class="act-title">Teaching It to Act</h2>
+
+  <div class="prose">
+    <p>Seeing is useful. But the leap from assistant to agent happens when the model can <em>change things</em>. Two more tools complete the picture: <code>edit_file</code> replaces a specific string in a file (forcing the model to read first, so it knows the exact content). <code>run_bash</code> executes shell commands &mdash; with safety checks and a timeout.</p>
+    <p>With these four tools, the agent can read code, edit it, and run tests to verify its changes. Watch what happens when you give it a real task:</p>
+  </div>
+
+  <div class="code-block code-block--interaction">
+    <div class="code-header">
+      <span class="code-dot"></span>
+      <span class="code-dot"></span>
+      <span class="code-dot"></span>
+      <span class="code-label">agent session</span>
+    </div>
+    <pre><span class="prompt-marker">You:</span> Add error handling to the divide function in math.py
+
+  <span class="dim">[tool]</span> <span class="tool">read_file</span>(<span class="str">{"path": "math.py"}</span>)
+  <span class="dim">[tool]</span> <span class="tool">edit_file</span>(<span class="str">{"path": "math.py",
+         "old_string": "return a / b",
+         "new_string": "if b == 0:\n        return 'Error: division by zero'\n    return a / b"}</span>)
+  <span class="dim">[tool]</span> <span class="tool">run_bash</span>(<span class="str">{"command": "python -m pytest test_math.py"}</span>)
+
+<span class="prompt-marker">Agent:</span> I've added a zero-division check to the divide
+       function. All tests pass.</pre>
+  </div>
+
+  <div class="prose">
+    <p>The model read the file, figured out the exact string to replace, made the edit, ran the tests, and reported back. Four tool calls, fully autonomous, no human in the loop.</p>
+    <p>That's the complete architecture. A <strong>while loop</strong> on the outside for the conversation. A <strong>while loop</strong> on the inside for tool calls. A handful of tool definitions and implementations. In about 300 lines of Python, you have a working coding agent.</p>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">Why it matters</div>
+    <p>In 300 lines of Python, you have a coding agent. Not a toy &mdash; the same architecture that powers production tools. The difference between this and Claude Code is polish, not paradigm.</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!--  Closing                                -->
+  <!-- ═══════════════════════════════════════ -->
+
+  <div class="closing">
+    <p>An AI agent isn't magic. It's a while loop, a list of messages, and a set of tools. The magic is in the model &mdash; trained on the sum of human code to make reasonable decisions about what to read, what to change, and when to stop. Understanding this architecture is the first step to building AI tools that actually work.</p>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-section">
+    <h3 class="cta-heading">Build this yourself</h3>
+    <p class="cta-text">Join our hands-on workshop where you'll write a working coding agent from scratch in an afternoon. No frameworks, no magic &mdash; just Python.</p>
+    <a href="#" class="cta-button">
+      Register for the Workshop
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+    </a>
+  </div>
+
+  <footer class="article-footer">
+    <p>AI Agents: From Concept to Code &mdash; a workshop by <a href="#">IIT Alumni Centre Bengaluru</a></p>
+  </footer>
+
+</article>
+
+</body>
+</html>

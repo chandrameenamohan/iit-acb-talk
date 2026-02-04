@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Agents: From Concept to Code — Workshop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --indigo-deep: #110a3e;
+    --indigo-mid: #1e1260;
+    --indigo-soft: #2d1b7a;
+    --lavender-bg: #eee8f8;
+    --lavender-light: #f5f1fb;
+    --white: #ffffff;
+    --text-dark: #1a1044;
+    --text-body: #2e2458;
+    --text-muted: #6b5f8a;
+    --accent-violet: #7c3aed;
+    --pill-border: #c4b5e0;
+    --pill-bg: rgba(255,255,255,0.6);
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+  }
+
+  @page { size: A4 landscape; margin: 0; }
+  html { font-size: 12.5px; -webkit-font-smoothing: antialiased; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--lavender-bg);
+    color: var(--text-body);
+    min-height: auto;
+    padding: 0;
+    max-height: 210mm;
+    overflow: hidden;
+  }
+
+  /* ── Header Bar ── */
+  .header-bar {
+    background: var(--indigo-deep);
+    color: var(--white);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 32px;
+  }
+
+  .header-bar h1 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.5rem;
+    letter-spacing: -0.01em;
+    font-style: italic;
+  }
+
+  .header-bar .header-note {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.72);
+    letter-spacing: 0.01em;
+    max-width: 420px;
+    text-align: right;
+    line-height: 1.45;
+  }
+
+  /* ── Main Card ── */
+  .card-wrapper {
+    padding: 12px 32px 10px;
+  }
+
+  .card {
+    background: var(--white);
+    border-radius: 14px;
+    padding: 20px 32px 0;
+    box-shadow:
+      0 1px 3px rgba(17,10,62,0.04),
+      0 8px 32px rgba(17,10,62,0.07);
+    overflow: hidden;
+  }
+
+  /* ── Title Area ── */
+  .card-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.8rem;
+    color: var(--text-dark);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-bottom: 12px;
+  }
+
+  .pills {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .pill {
+    font-size: 0.82rem;
+    font-weight: 500;
+    padding: 7px 18px;
+    border-radius: 100px;
+    border: 1.5px solid var(--pill-border);
+    background: var(--pill-bg);
+    color: var(--indigo-mid);
+    letter-spacing: 0.01em;
+    backdrop-filter: blur(4px);
+  }
+
+  .pill--highlight {
+    background: var(--indigo-deep);
+    color: var(--white);
+    border-color: var(--indigo-deep);
+  }
+
+  /* ── Three Columns ── */
+  .columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #ece6f5;
+  }
+
+  .col-heading {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--text-dark);
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+
+  .col-text {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-body);
+  }
+
+  .arrow-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .arrow-list li {
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: var(--text-body);
+    padding-left: 24px;
+    position: relative;
+  }
+
+  .arrow-list li::before {
+    content: "\2192";
+    position: absolute;
+    left: 0;
+    color: var(--accent-violet);
+    font-weight: 600;
+  }
+
+  /* ── Footer Bar ── */
+  .card-footer {
+    background: var(--indigo-deep);
+    margin: 0 -32px;
+    padding: 14px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0;
+  }
+
+  .card-footer p {
+    color: rgba(255,255,255,0.78);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    max-width: 620px;
+  }
+
+  .btn-register {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--white);
+    color: var(--indigo-deep);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.92rem;
+    padding: 14px 36px;
+    border-radius: 100px;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+
+  .btn-register:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.22);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .columns { grid-template-columns: 1fr; gap: 28px; }
+    .header-bar { flex-direction: column; gap: 10px; padding: 18px 24px; }
+    .header-bar .header-note { text-align: left; }
+    .card-wrapper { padding: 20px 16px; }
+    .card { padding: 32px 28px 0; }
+    .card-footer { margin: 0 -28px; padding: 20px 28px; flex-direction: column; gap: 16px; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="header-bar">
+    <h1>What to Expect</h1>
+    <span class="header-note">Early Bird: &#8377;2,999 &middot; Limited Seats &middot; IIT Alumni Centre Bengaluru</span>
+  </div>
+
+  <div class="card-wrapper">
+    <div class="card">
+
+      <h2 class="card-title">AI Agents: From Concept to Code</h2>
+
+      <div class="pills">
+        <span class="pill">Developers</span>
+        <span class="pill">CS Students</span>
+        <span class="pill">AI Enthusiasts</span>
+        <span class="pill pill--highlight">6 Hour Workshop</span>
+      </div>
+
+      <div class="columns">
+
+        <!-- About -->
+        <div>
+          <h3 class="col-heading">About</h3>
+          <p class="col-text">
+            Led by software engineering professionals with graduation from IIT Bombay in Computer Science and 15+ years of experience at Walmart Labs, Oracle, Amazon, VMware, and Broadcom. AI Agents are part of their daily work &mdash; this workshop comes from practical, hands-on experience, not theory.
+          </p>
+          <p class="col-text" style="margin-top:8px">
+            Participants will go from zero to building a working AI coding agent in Python. There will be minimal lectures &mdash; most of the time is spent writing real code. If you enjoy building things and learning by doing rather than watching slides, this workshop is for you.
+          </p>
+        </div>
+
+        <!-- Topics Covered -->
+        <div>
+          <h3 class="col-heading">Topics covered</h3>
+          <ul class="arrow-list">
+            <li>What AI Agents are and how they differ from simple LLM calls</li>
+            <li>Agent architecture: tools, memory, and the control loop</li>
+            <li>Context engineering &mdash; managing tokens, models, cost, and safety</li>
+            <li>Building a working AI coding agent from scratch in Python</li>
+            <li>Hands-on coding with 4 progressive milestones</li>
+          </ul>
+        </div>
+
+        <!-- Not a good fit -->
+        <div>
+          <h3 class="col-heading">Not a good fit for</h3>
+          <ul class="arrow-list">
+            <li>Individuals looking for a high-level overview without coding</li>
+            <li>Individuals without basic Python knowledge</li>
+            <li>Individuals expecting a plug-and-play template they can copy-paste</li>
+            <li>Individuals not willing to bring a laptop and code along</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="card-footer">
+        <p>Early bird pricing: &#8377;2,999. Hosted at IIT Alumni Centre Bengaluru. Seats are limited.</p>
+        <button class="btn-register">Register Now</button>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

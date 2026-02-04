@@ -53,17 +53,53 @@ style: |
 
 ---
 
+# Two Options: Choose Your SDK
+
+| | **OpenAI SDK** (default) | **Anthropic SDK** |
+|---|---|---|
+| Files | `agent.py`, `solution.py` | `agent_anthropic.py`, `solution_anthropic.py` |
+| Install | `pip install openai` | `pip install anthropic` |
+| Works with | OpenAI, Gemini, Ollama, Anthropic | Anthropic only |
+| Config | Env vars: `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `MODEL` | `ANTHROPIC_API_KEY` |
+
+**Recommendation:** Use the OpenAI SDK — one codebase, any provider.
+
+---
+
+# Provider Config (OpenAI SDK)
+
+```bash
+# OpenAI (default — nothing extra needed)
+export OPENAI_API_KEY="sk-..."
+
+# Google Gemini
+export OPENAI_API_KEY="your-gemini-key"
+export OPENAI_BASE_URL="https://generativelanguage.googleapis.com/v1beta/openai/"
+export MODEL="gemini-2.0-flash"
+
+# Ollama (local, free)
+export OPENAI_BASE_URL="http://localhost:11434/v1"
+export OPENAI_API_KEY="unused"
+export MODEL="qwen2.5"
+
+# Anthropic
+export OPENAI_API_KEY="sk-ant-..."
+export OPENAI_BASE_URL="https://api.anthropic.com/v1/"
+export MODEL="claude-sonnet-4-20250514"
+```
+
+---
+
 # What You Need
 
 - ✅ Laptop with a code editor
 - ✅ Python 3.10+
-- ✅ Anthropic API key (`console.anthropic.com`)
-- ✅ $5-10 credit on your account
+- ✅ An API key (OpenAI, Gemini, Anthropic, or Ollama running locally)
 - ✅ Git installed
 
 ```bash
-pip install anthropic
-export ANTHROPIC_API_KEY="sk-ant-..."
+pip install openai
+export OPENAI_API_KEY="sk-..."
 ```
 
 ---
@@ -134,7 +170,7 @@ These aren't bugs in your code — they're **inherent to the pattern.**
      ▼
  ┌────────┐
  │  LLM   │◄── System Prompt + Tool Definitions
- │(Claude) │
+ │        │
  └───┬────┘
      │
      ▼
@@ -159,20 +195,23 @@ The model decides when and which tools to call. You just execute.
 
 ---
 
-# How Tool Use Works
+# How Tool Use Works (OpenAI format)
 
-You provide **tool definitions** — name, description, input schema:
+You provide **tool definitions** — type, function name, description, parameters:
 
 ```python
 {
-    "name": "read_file",
-    "description": "Read the contents of a file",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "path": {"type": "string", "description": "File path"}
-        },
-        "required": ["path"]
+    "type": "function",
+    "function": {
+        "name": "read_file",
+        "description": "Read the contents of a file",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "File path"}
+            },
+            "required": ["path"]
+        }
     }
 }
 ```
@@ -218,8 +257,8 @@ After executing a tool, send the result back:
 
 ```python
 {
-    "type": "tool_result",
-    "tool_use_id": block.id,  # must match the request
+    "role": "tool",
+    "tool_call_id": tool_call.id,  # must match the request
     "content": "file contents here..."
 }
 ```
@@ -253,7 +292,7 @@ What matters for an agent:
 - **Instruction following** — it must respect your system prompt
 - **Reasoning** — it needs to break down problems
 
-Claude Sonnet is a good balance of capability and cost.
+GPT-4o / Claude Sonnet / Gemini Flash are all good choices.
 
 ---
 
@@ -261,11 +300,12 @@ Claude Sonnet is a good balance of capability and cost.
 
 | | Input | Output |
 |---|-------|--------|
-| Sonnet | $3/M tokens | $15/M tokens |
+| GPT-4o | $2.50/M tokens | $10/M tokens |
+| Claude Sonnet | $3/M tokens | $15/M tokens |
+| Gemini Flash | $0.075/M tokens | $0.30/M tokens |
+| Ollama (local) | Free | Free |
 
-A typical agent session: ~10-50K tokens = **$0.03 - $0.50**
-
-$5-10 of credit is plenty for this workshop.
+A typical agent session: ~10-50K tokens = **$0.01 - $0.50**
 
 ---
 
@@ -342,8 +382,8 @@ Watch what happens. This is what debugging agents looks like.
 # Mini Hands-On: Verify Setup
 
 1. Clone the repo: `git clone <repo-url>`
-2. Run `pip install anthropic`
-3. Set your API key: `export ANTHROPIC_API_KEY="sk-ant-..."`
+2. Run `pip install openai` (or `pip install anthropic`)
+3. Set your API key: `export OPENAI_API_KEY="sk-..."`
 4. Run `python solution.py` — try asking it to read a file
 5. Working? Great — you'll build this from scratch after lunch.
 
@@ -356,7 +396,7 @@ Watch what happens. This is what debugging agents looks like.
 Let's look at `agent.py` together.
 
 **Structure:**
-1. Tool definitions (JSON schemas)
+1. Tool definitions (JSON schemas — OpenAI format)
 2. Tool implementations (Python functions)
 3. Tool dispatcher (`execute_tool`)
 4. Agent loop (outer loop + inner tool loop)
@@ -366,12 +406,14 @@ Let's look at `agent.py` together.
 # What You'll Build
 
 ```
-agent.py              ← starter code with TODOs
-solution.py           ← complete reference (no peeking!)
+agent.py              ← starter code with TODOs (OpenAI SDK)
+solution.py           ← complete reference (OpenAI SDK)
 milestone1_done.py    ← checkpoint after milestone 1
 milestone2_done.py    ← checkpoint after milestone 2
 milestone3_done.py    ← checkpoint after milestone 3
-requirements.txt      ← just "anthropic"
+agent_anthropic.py    ← starter code (Anthropic SDK)
+solution_anthropic.py ← complete reference (Anthropic SDK)
+requirements.txt      ← openai + anthropic
 ```
 
 4 milestones, each builds on the last. **Checkpoint files** let you catch up if you fall behind.
@@ -391,8 +433,8 @@ requirements.txt      ← just "anthropic"
 > **Checkpoint files available:** If you fall behind, copy `milestone1_done.py` → `agent.py` to catch up.
 
 1. Fill in the API call in the agent loop
-2. Handle `stop_reason == "tool_use"` — execute tools, feed results back
-3. Handle `stop_reason == "end_turn"` — print the response
+2. Handle `message.tool_calls` — execute tools, feed results back
+3. Handle no tool calls — print the response
 4. Test: ask the agent to read a file
 
 ---
@@ -400,10 +442,9 @@ requirements.txt      ← just "anthropic"
 # The API Call
 
 ```python
-response = client.messages.create(
+response = client.chat.completions.create(
     model=MODEL,
     max_tokens=MAX_TOKENS,
-    system=SYSTEM_PROMPT,
     tools=TOOLS,
     messages=messages,
 )
@@ -414,23 +455,21 @@ response = client.messages.create(
 # Processing the Response
 
 ```python
-messages.append({"role": "assistant", "content": response.content})
+message = response.choices[0].message
+messages.append(message)
 
-if response.stop_reason == "tool_use":
-    tool_results = []
-    for block in response.content:
-        if block.type == "tool_use":
-            result = execute_tool(block.name, block.input)
-            tool_results.append({
-                "type": "tool_result",
-                "tool_use_id": block.id,
-                "content": result,
-            })
-    messages.append({"role": "user", "content": tool_results})
+if message.tool_calls:
+    for tool_call in message.tool_calls:
+        args = json.loads(tool_call.function.arguments)
+        result = execute_tool(tool_call.function.name, args)
+        messages.append({
+            "role": "tool",
+            "tool_call_id": tool_call.id,
+            "content": result,
+        })
 else:
-    for block in response.content:
-        if hasattr(block, "text"):
-            print(f"\nAgent: {block.text}")
+    if message.content:
+        print(f"\nAgent: {message.content}")
     break
 ```
 
@@ -597,7 +636,7 @@ Watch it create the file, then open it in your browser.
 
 - **Guide:** ampcode.com/how-to-build-an-agent
 - **Deep dive:** ghuntley.com/agent
-- **API docs:** docs.anthropic.com
+- **API docs:** platform.openai.com/docs / docs.anthropic.com
 - **Console:** console.anthropic.com
 - **Course:** kaggle.com/learn-guide/5-day-agents (Google's 5-day AI Agents intensive — covers memory, evaluation, multi-agent patterns)
 

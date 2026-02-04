@@ -11,7 +11,7 @@
 │       ▼                                 │
 │   ┌─────────┐                           │
 │   │  LLM    │◄─── System Prompt         │
-│   │ (Claude)│                           │
+│   │         │                           │
 │   └────┬────┘                           │
 │        │                                │
 │        ▼                                │
@@ -28,6 +28,21 @@
 └─────────────────────────────────────────┘
 ```
 
+## Two SDK Options
+
+The workshop code uses the **OpenAI SDK** by default. The OpenAI SDK works with many providers via `BASE_URL`:
+
+| Provider | `OPENAI_API_KEY` | `OPENAI_BASE_URL` | `MODEL` |
+|----------|------------------|--------------------|---------|
+| **OpenAI** (default) | `sk-...` | *(not needed)* | `gpt-4o` |
+| **Gemini** | your Gemini key | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.0-flash` |
+| **Ollama** (local) | `unused` | `http://localhost:11434/v1` | `qwen2.5` |
+| **Anthropic** | `sk-ant-...` | `https://api.anthropic.com/v1/` | `claude-sonnet-4-20250514` |
+
+If you prefer the **Anthropic SDK** directly, use the `_anthropic` variants:
+- `agent_anthropic.py` — starter code
+- `solution_anthropic.py` — complete solution
+
 ## The 5 Core Tools
 
 | Tool | Purpose | Key Parameters |
@@ -38,21 +53,24 @@
 | `run_bash` | Execute shell commands | `command` |
 | `search_files` | Regex search in files | `pattern`, `path` (optional) |
 
-## Tool Definition Format (for Anthropic API)
+## Tool Definition Format (OpenAI format)
 
 ```python
 {
-    "name": "read_file",
-    "description": "Read the contents of a file",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "path": {
-                "type": "string",
-                "description": "Path to the file to read"
-            }
-        },
-        "required": ["path"]
+    "type": "function",
+    "function": {
+        "name": "read_file",
+        "description": "Read the contents of a file",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Path to the file to read"
+                }
+            },
+            "required": ["path"]
+        }
     }
 }
 ```
@@ -60,30 +78,41 @@
 ## The Agent Loop (Pseudocode)
 
 ```python
-messages = []
+from openai import OpenAI
+import json, os
+
+client = OpenAI(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+)
+
+messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 while True:
     user_input = input("> ")
     messages.append({"role": "user", "content": user_input})
 
     while True:  # tool loop
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            system=SYSTEM_PROMPT,
+        response = client.chat.completions.create(
+            model=os.getenv("MODEL", "gpt-4o"),
             tools=TOOLS,
             messages=messages,
             max_tokens=4096,
         )
 
-        # Collect assistant response
-        messages.append({"role": "assistant", "content": response.content})
+        message = response.choices[0].message
+        messages.append(message)
 
-        # If model wants to use tools, execute them
-        if response.stop_reason == "tool_use":
-            tool_results = execute_tools(response.content)
-            messages.append({"role": "user", "content": tool_results})
+        if message.tool_calls:
+            for tool_call in message.tool_calls:
+                args = json.loads(tool_call.function.arguments)
+                result = execute_tool(tool_call.function.name, args)
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": result,
+                })
         else:
-            # Model is done — print text and break
-            print_response(response.content)
+            print(message.content)
             break
 ```
 
@@ -91,17 +120,17 @@ while True:
 
 **Context Window:** The model's "memory" — all messages + tool results must fit. Keep it lean.
 
-**stop_reason:** After each API call, check `response.stop_reason`:
-- `"end_turn"` → model is done, print the text
-- `"tool_use"` → model wants to call a tool, execute it and loop
+**tool_calls:** After each API call, check `message.tool_calls`:
+- If it has tool calls → execute them, send results back, loop
+- If `None` → model is done, print `message.content`
 
-**Tool Results:** After executing a tool, send the result back as a user message with `type: "tool_result"`.
+**Tool Results:** After executing a tool, send the result back as a message with `role: "tool"` and the matching `tool_call_id`.
 
 ## Debugging Your Agent
 
 When things go wrong, check these in order:
 
-1. **Read the tool calls** — print `block.name` and `block.input` for every tool call. Is the model sending what you expect?
+1. **Read the tool calls** — print `tool_call.function.name` and the parsed arguments. Is the model sending what you expect?
 2. **Check the tool result** — is your function returning an error string? The model sees that error and tries to recover.
 3. **Look at message history** — print `len(messages)` to check if you're running out of context. If it's over 50 messages, something is looping.
 4. **Test the tool in isolation** — call your function directly from a Python REPL with the same arguments.
@@ -135,14 +164,14 @@ When things go wrong, check these in order:
 
 ## Quick Reference
 
-- API Docs: https://docs.anthropic.com
-- Console: https://console.anthropic.com
+- API Docs: https://platform.openai.com/docs
+- Anthropic Docs: https://docs.anthropic.com
 - Guide: https://ampcode.com/how-to-build-an-agent
 - Further Learning: https://www.kaggle.com/learn-guide/5-day-agents (5-Day AI Agents course by Google & Kaggle)
 
 ## Setup Checklist
 
 - [ ] Python 3.10+ installed (`python3 --version`)
-- [ ] `pip install anthropic`
-- [ ] API key set: `export ANTHROPIC_API_KEY="sk-ant-..."`
+- [ ] `pip install openai` (or `pip install anthropic` for Anthropic SDK variant)
+- [ ] API key set: `export OPENAI_API_KEY="sk-..."` (or your provider's key)
 - [ ] Run `python agent.py` — should start without errors

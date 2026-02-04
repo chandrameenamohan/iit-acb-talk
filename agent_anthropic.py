@@ -8,26 +8,15 @@ Milestones:
   2. Add list_files and edit_file (30-60 min)
   3. Add bash execution with safety checks (60-90 min)
   4. Polish, test, stretch goals (90-120 min)
-
-Provider compatibility (set env vars before running):
-  OpenAI (default):  OPENAI_API_KEY=sk-...
-  Gemini:            OPENAI_API_KEY=... OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/ MODEL=gemini-2.0-flash
-  Ollama:            OPENAI_BASE_URL=http://localhost:11434/v1 OPENAI_API_KEY=unused MODEL=qwen2.5
-  Anthropic:         OPENAI_API_KEY=sk-ant-... OPENAI_BASE_URL=https://api.anthropic.com/v1/ MODEL=claude-sonnet-4-20250514
 """
 
-import json
 import os
 import subprocess
-from openai import OpenAI
+import anthropic
 
 # --- Configuration ---
-API_KEY = os.getenv("OPENAI_API_KEY")
-BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
-MODEL = os.getenv("MODEL", "gpt-4o")
+MODEL = "claude-sonnet-4-20250514"
 MAX_TOKENS = 4096
-
-client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
 
 SYSTEM_PROMPT = """You are a helpful coding assistant. You have access to tools that let you
 read, list, edit, and search files, and run bash commands. Use these tools to help the user
@@ -39,58 +28,51 @@ Important rules:
 - Explain what you're doing before and after making changes.
 - Be cautious with bash commands — never run destructive commands."""
 
-# --- Tool Definitions (OpenAI format) ---
+# --- Tool Definitions ---
 # These tell the model what tools are available and their parameters.
 
 TOOLS = [
     # MILESTONE 1: Start with just this tool
     {
-        "type": "function",
-        "function": {
-            "name": "read_file",
-            "description": "Read the contents of a file at the given path. Returns the file content as a string.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "The path to the file to read",
-                    }
-                },
-                "required": ["path"],
+        "name": "read_file",
+        "description": "Read the contents of a file at the given path. Returns the file content as a string.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "The path to the file to read",
+                }
             },
+            "required": ["path"],
         },
     },
     # MILESTONE 2: Add these two tools
     #
     # TODO: Add a "list_files" tool definition
-    #   - type: "function"
-    #   - function.name: "list_files"
-    #   - function.description: List files and directories at the given path (defaults to ".")
-    #   - function.parameters: one optional property "path" (string)
+    #   - name: "list_files"
+    #   - description: List files and directories at the given path (defaults to ".")
+    #   - input_schema: one optional property "path" (string)
     #
     # TODO: Add an "edit_file" tool definition
-    #   - type: "function"
-    #   - function.name: "edit_file"
-    #   - function.description: Edit a file by replacing old_string with new_string
-    #   - function.parameters: three required properties:
+    #   - name: "edit_file"
+    #   - description: Edit a file by replacing old_string with new_string
+    #   - input_schema: three required properties:
     #       "path" (string), "old_string" (string), "new_string" (string)
     #
     # MILESTONE 3: Add bash tool
     #
     # TODO: Add a "run_bash" tool definition
-    #   - type: "function"
-    #   - function.name: "run_bash"
-    #   - function.description: Run a bash command and return stdout/stderr
-    #   - function.parameters: one required property "command" (string)
+    #   - name: "run_bash"
+    #   - description: Run a bash command and return stdout/stderr
+    #   - input_schema: one required property "command" (string)
     #
     # STRETCH: Add search tool
     #
     # TODO: Add a "search_files" tool definition
-    #   - type: "function"
-    #   - function.name: "search_files"
-    #   - function.description: Search for a regex pattern in files
-    #   - function.parameters: required "pattern" (string), optional "path" (string)
+    #   - name: "search_files"
+    #   - description: Search for a regex pattern in files
+    #   - input_schema: required "pattern" (string), optional "path" (string)
 ]
 
 
@@ -129,24 +111,24 @@ def read_file(path: str) -> str:
 #     ...
 
 
-def execute_tool(name: str, args: dict) -> str:
+def execute_tool(name: str, input: dict) -> str:
     """Dispatch a tool call to the right function."""
     if name == "read_file":
-        return read_file(args["path"])
+        return read_file(input["path"])
 
     # TODO (MILESTONE 2): Add cases for list_files and edit_file
     # elif name == "list_files":
-    #     return list_files(args.get("path", "."))
+    #     return list_files(input.get("path", "."))
     # elif name == "edit_file":
-    #     return edit_file(args["path"], args["old_string"], args["new_string"])
+    #     return edit_file(input["path"], input["old_string"], input["new_string"])
 
     # TODO (MILESTONE 3): Add case for run_bash
     # elif name == "run_bash":
-    #     return run_bash(args["command"])
+    #     return run_bash(input["command"])
 
     # TODO (STRETCH): Add case for search_files
     # elif name == "search_files":
-    #     return search_files(args["pattern"], args.get("path", "."))
+    #     return search_files(input["pattern"], input.get("path", "."))
 
     else:
         return f"Unknown tool: {name}"
@@ -156,7 +138,8 @@ def execute_tool(name: str, args: dict) -> str:
 
 def agent_loop():
     """Main conversation loop."""
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    client = anthropic.Anthropic()  # uses ANTHROPIC_API_KEY env var
+    messages = []
 
     print("AI Coding Agent (type 'quit' to exit)")
     print("=" * 40)
@@ -180,27 +163,23 @@ def agent_loop():
 
         # --- Inner loop: keep going while the model wants to use tools ---
         while True:
-            # TODO: Call the OpenAI API
-            #   Use client.chat.completions.create() with:
-            #     model=MODEL, max_tokens=MAX_TOKENS,
+            # TODO: Call the Anthropic API
+            #   Use client.messages.create() with:
+            #     model=MODEL, max_tokens=MAX_TOKENS, system=SYSTEM_PROMPT,
             #     tools=TOOLS, messages=messages
             response = None  # Replace this line!
 
-            # TODO: Get the message from response.choices[0].message
-            # message = response.choices[0].message
+            # TODO: Append the assistant's response to messages
+            #   messages.append({"role": "assistant", "content": response.content})
 
-            # TODO: Append the assistant's message to messages
-            #   messages.append(message)
-
-            # TODO: Check message.tool_calls
-            #   If tool_calls is not None:
-            #     - For each tool_call in message.tool_calls:
-            #       - Parse args: json.loads(tool_call.function.arguments)
-            #       - Execute: execute_tool(tool_call.function.name, args)
-            #       - Append tool result: {"role": "tool", "tool_call_id": tool_call.id, "content": result}
+            # TODO: Check response.stop_reason
+            #   If "tool_use":
+            #     - Find tool_use blocks in response.content
+            #     - Execute each tool using execute_tool()
+            #     - Build tool_result messages and append to messages
             #     - Continue the loop
-            #   Else:
-            #     - Print message.content
+            #   If "end_turn" (or anything else):
+            #     - Print text blocks from response.content
             #     - Break out of the inner loop
 
             break  # Remove this once you implement the logic above

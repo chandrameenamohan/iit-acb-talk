@@ -1,15 +1,26 @@
 """
 AI Coding Agent — Milestone 3 Complete
 Loop + read_file + list_files + edit_file + run_bash working.
+
+Provider compatibility (set env vars before running):
+  OpenAI (default):  OPENAI_API_KEY=sk-...
+  Gemini:            OPENAI_API_KEY=... OPENAI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/ MODEL=gemini-2.0-flash
+  Ollama:            OPENAI_BASE_URL=http://localhost:11434/v1 OPENAI_API_KEY=unused MODEL=qwen2.5
+  Anthropic:         OPENAI_API_KEY=sk-ant-... OPENAI_BASE_URL=https://api.anthropic.com/v1/ MODEL=claude-sonnet-4-20250514
 """
 
+import json
 import os
 import subprocess
-import anthropic
+from openai import OpenAI
 
 # --- Configuration ---
-MODEL = "claude-sonnet-4-20250514"
+API_KEY = os.getenv("OPENAI_API_KEY")
+BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+MODEL = os.getenv("MODEL", "gpt-4o")
 MAX_TOKENS = 4096
+
+client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
 
 SYSTEM_PROMPT = """You are a helpful coding assistant. You have access to tools that let you
 read, list, and edit files, and run bash commands. Use these tools to help the user
@@ -25,66 +36,78 @@ Important rules:
 
 TOOLS = [
     {
-        "name": "read_file",
-        "description": "Read the contents of a file at the given path. Returns the file content as a string.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "The path to the file to read",
-                }
-            },
-            "required": ["path"],
-        },
-    },
-    {
-        "name": "list_files",
-        "description": "List files and directories at the given path. If no path is provided, lists the current directory.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "The directory path to list (defaults to current directory)",
-                }
+        "type": "function",
+        "function": {
+            "name": "read_file",
+            "description": "Read the contents of a file at the given path. Returns the file content as a string.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "The path to the file to read",
+                    }
+                },
+                "required": ["path"],
             },
         },
     },
     {
-        "name": "edit_file",
-        "description": "Edit a file by replacing an exact string match. The old_string must appear exactly once in the file. Read the file first to get the exact content.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "The path to the file to edit",
-                },
-                "old_string": {
-                    "type": "string",
-                    "description": "The exact string to find and replace",
-                },
-                "new_string": {
-                    "type": "string",
-                    "description": "The string to replace it with",
+        "type": "function",
+        "function": {
+            "name": "list_files",
+            "description": "List files and directories at the given path. If no path is provided, lists the current directory.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "The directory path to list (defaults to current directory)",
+                    }
                 },
             },
-            "required": ["path", "old_string", "new_string"],
         },
     },
     {
-        "name": "run_bash",
-        "description": "Run a bash command and return its stdout and stderr. Use this for running tests, installing packages, or other shell operations. Do not use for destructive commands like rm -rf.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "command": {
-                    "type": "string",
-                    "description": "The bash command to execute",
-                }
+        "type": "function",
+        "function": {
+            "name": "edit_file",
+            "description": "Edit a file by replacing an exact string match. The old_string must appear exactly once in the file. Read the file first to get the exact content.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "The path to the file to edit",
+                    },
+                    "old_string": {
+                        "type": "string",
+                        "description": "The exact string to find and replace",
+                    },
+                    "new_string": {
+                        "type": "string",
+                        "description": "The string to replace it with",
+                    },
+                },
+                "required": ["path", "old_string", "new_string"],
             },
-            "required": ["command"],
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "run_bash",
+            "description": "Run a bash command and return its stdout and stderr. Use this for running tests, installing packages, or other shell operations. Do not use for destructive commands like rm -rf.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "command": {
+                        "type": "string",
+                        "description": "The bash command to execute",
+                    }
+                },
+                "required": ["command"],
+            },
         },
     },
 ]
@@ -169,16 +192,16 @@ def run_bash(command: str) -> str:
         return f"Error running command: {e}"
 
 
-def execute_tool(name: str, input: dict) -> str:
+def execute_tool(name: str, args: dict) -> str:
     """Dispatch a tool call to the right function."""
     if name == "read_file":
-        return read_file(input["path"])
+        return read_file(args["path"])
     elif name == "list_files":
-        return list_files(input.get("path", "."))
+        return list_files(args.get("path", "."))
     elif name == "edit_file":
-        return edit_file(input["path"], input["old_string"], input["new_string"])
+        return edit_file(args["path"], args["old_string"], args["new_string"])
     elif name == "run_bash":
-        return run_bash(input["command"])
+        return run_bash(args["command"])
     else:
         return f"Unknown tool: {name}"
 
@@ -188,8 +211,7 @@ def execute_tool(name: str, input: dict) -> str:
 
 def agent_loop():
     """Main conversation loop."""
-    client = anthropic.Anthropic()
-    messages = []
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
     print("AI Coding Agent (type 'quit' to exit)")
     print("=" * 40)
@@ -210,34 +232,31 @@ def agent_loop():
         messages.append({"role": "user", "content": user_input})
 
         while True:
-            response = client.messages.create(
+            response = client.chat.completions.create(
                 model=MODEL,
                 max_tokens=MAX_TOKENS,
-                system=SYSTEM_PROMPT,
                 tools=TOOLS,
                 messages=messages,
             )
 
-            messages.append({"role": "assistant", "content": response.content})
+            message = response.choices[0].message
+            messages.append(message)
 
-            if response.stop_reason == "tool_use":
-                tool_results = []
-                for block in response.content:
-                    if block.type == "tool_use":
-                        print(f"  [tool] {block.name}({block.input})")
-                        result = execute_tool(block.name, block.input)
-                        tool_results.append(
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": block.id,
-                                "content": result,
-                            }
-                        )
-                messages.append({"role": "user", "content": tool_results})
+            if message.tool_calls:
+                for tool_call in message.tool_calls:
+                    args = json.loads(tool_call.function.arguments)
+                    print(f"  [tool] {tool_call.function.name}({args})")
+                    result = execute_tool(tool_call.function.name, args)
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tool_call.id,
+                            "content": result,
+                        }
+                    )
             else:
-                for block in response.content:
-                    if hasattr(block, "text"):
-                        print(f"\nAgent: {block.text}")
+                if message.content:
+                    print(f"\nAgent: {message.content}")
                 break
 
 
