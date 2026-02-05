@@ -9,6 +9,16 @@ title: "Building an AI Coding Agent — Workshop"
 
 ---
 
+## Speakers
+
+**Chandra Mohan Meena**
+Principal Engineer at Hakimo AI, B.Tech + M.Tech in CS from IIT Bombay. Builds production AI agents with Claude and Gemini. 12+ years at Amazon, Oracle, Walmart Labs. Has presented his work at USENIX OpML and ECML-PKDD.
+
+**Nishant Shreshth**
+Staff Engineer at Broadcom, B.Tech + M.Tech in EE from IIT Bombay. Builds AI agents at Broadcom. 15+ years at VMware, Coinbase, Hakimo, Amadeus Labs.
+
+---
+
 ## Schedule
 
 | Time (IST) | Session | Format |
